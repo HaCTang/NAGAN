@@ -143,7 +143,7 @@ class Discriminator(nn.Module):
         total_loss = l2_loss + wgan_loss + cross_entropy_loss
         return total_loss
 
-    def train_model(self, input_x, input_y, dropout_keep_prob, optimizer):
+    def train(self, input_x, input_y, dropout_keep_prob, optimizer):
         optimizer.zero_grad()
         scores = self.forward(input_x, dropout_keep_prob)
         loss = self.compute_loss(input_y, scores)
@@ -154,16 +154,16 @@ class Discriminator(nn.Module):
         return loss.item()
 
 # 使用示例
-discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=100, embedding_size=128,
-                              filter_sizes=[3, 4, 5], num_filters=[128, 128, 128], l2_reg_lambda=1.0,
-                              wgan_reg_lambda=1.0, grad_clip=1.0)
-input_x = torch.randint(0, 100, (10, 20))
-input_y = torch.randint(0, 2, (10,))
-dropout_keep_prob = 0.5
-optimizer = optim.Adam(discriminator.parameters())
-loss = discriminator.train_model(input_x, input_y, dropout_keep_prob, optimizer)
-print(loss)
-scores = discriminator.forward(input_x, dropout_keep_prob)
-print(scores)
-total_loss = discriminator.compute_loss(input_y, scores)
-print(total_loss)
+# discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=100, embedding_size=128,
+#                               filter_sizes=[3, 4, 5], num_filters=[128, 128, 128], l2_reg_lambda=1.0,
+#                               wgan_reg_lambda=1.0, grad_clip=1.0)
+# input_x = torch.randint(0, 100, (10, 20))
+# input_y = torch.randint(0, 2, (10,))
+# dropout_keep_prob = 0.5
+# optimizer = optim.Adam(discriminator.parameters())
+# loss = discriminator.train(input_x, input_y, dropout_keep_prob, optimizer)
+# print(loss)
+# scores = discriminator.forward(input_x, dropout_keep_prob)
+# print(scores)
+# total_loss = discriminator.compute_loss(input_y, scores)
+# print(total_loss)

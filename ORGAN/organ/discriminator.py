@@ -9,6 +9,7 @@ else:
     from tensorflow.python.ops import rnn_cell_impl as core_rnn_cell_impl
 
 
+
 # An alternative to tf.nn.rnn_cell._linear function, which has been removed in Tensorfow 1.0.1
 # The highway layer is from https://github.com/mkroutikov/tf-lstm-char-cnn
 def linear(input_, output_size, scope=None):
@@ -35,17 +36,17 @@ def linear(input_, output_size, scope=None):
     input_size = shape[1]
 
     # Now the computation.
-    with tf.compat.v1.variable_scope(scope or "SimpleLinear"):
-        matrix = tf.compat.v1.get_variable(
+    with tf.variable_scope(scope or "SimpleLinear"):
+        matrix = tf.get_variable(
             "Matrix", [output_size, input_size], dtype=input_.dtype)
-        bias_term = tf.compat.v1.get_variable("Bias", [output_size], dtype=input_.dtype)
+        bias_term = tf.get_variable("Bias", [output_size], dtype=input_.dtype)
 
     return tf.matmul(input_, tf.transpose(matrix)) + bias_term
 
 # example
-# input_ = tf.random.normal([10, 5])  # 假设输入是一个形状为 [batch, n] 的张量
-# output = linear(input_, 3)
-# print(output)
+input_ = tf.random_normal([10, 5])  # 假设输入是一个形状为 [batch, n] 的张量
+output = linear(input_, 3)
+print(output)
 
 
 def highway(input_, size, num_layers=1, bias=-2.0, f=tf.nn.relu, scope='Highway'):
@@ -55,7 +56,7 @@ def highway(input_, size, num_layers=1, bias=-2.0, f=tf.nn.relu, scope='Highway'
     where g is nonlinearity, t is transform gate, and (1 - t) is carry gate.
     """
 
-    with tf.compat.v1.variable_scope(scope):
+    with tf.variable_scope(scope):
         for idx in range(num_layers):
             g = f(linear(input_, size, scope='highway_lin_%d' % idx))
 
@@ -68,9 +69,9 @@ def highway(input_, size, num_layers=1, bias=-2.0, f=tf.nn.relu, scope='Highway'
     return output
 
 # example
-# input_ = tf.random.normal([10, 5])
-# output = highway(input_, size=5, num_layers=2, bias=-2.0, f=tf.nn.relu, scope='Highway')
-# print(output)
+input_ = tf.random_normal([10, 5])
+output = highway(input_, size=5, num_layers=2, bias=-2.0, f=tf.nn.relu, scope='Highway')
+print(output)
 
 
 class Discriminator(object):
@@ -83,11 +84,11 @@ class Discriminator(object):
             self, sequence_length, num_classes, vocab_size,
             embedding_size, filter_sizes, num_filters, l2_reg_lambda=1.0, wgan_reg_lambda=1.0, grad_clip=1.0):
         # Placeholders for input, output and dropout
-        self.input_x = tf.compat.v1.placeholder(
+        self.input_x = tf.placeholder(
             tf.int32, [None, sequence_length], name="input_x")
-        self.input_y = tf.compat.v1.placeholder(
+        self.input_y = tf.placeholder(
             tf.float32, [None, num_classes], name="input_y")
-        self.dropout_keep_prob = tf.compat.v1.placeholder(
+        self.dropout_keep_prob = tf.placeholder(
             tf.float32, name="dropout_keep_prob")
 
         # Keeping track of l2 regularization loss (optional)
@@ -95,12 +96,12 @@ class Discriminator(object):
 
         self.d_count = 0
 
-        with tf.compat.v1.variable_scope('discriminator'):
+        with tf.variable_scope('discriminator'):
 
             # Embedding layer
             with tf.device('/cpu:0'), tf.name_scope("embedding"):
                 self.W = tf.Variable(
-                    tf.compat.v1.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
+                    tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
                     name="W")
                 self.embedded_chars = tf.nn.embedding_lookup(
                     self.W, self.input_x)
@@ -113,7 +114,7 @@ class Discriminator(object):
                 with tf.name_scope("conv-maxpool-{:s}".format(str(filter_size))):
                     # Convolution Layer
                     filter_shape = [filter_size, embedding_size, 1, num_filter]
-                    W = tf.Variable(tf.compat.v1.truncated_normal(
+                    W = tf.Variable(tf.truncated_normal(
                         filter_shape, stddev=0.1), name="W")
                     b = tf.Variable(tf.constant(
                         0.1, shape=[num_filter]), name="b")
@@ -260,3 +261,21 @@ class Discriminator(object):
             self.dropout_keep_prob: dis_dropout_keep_prob
         }
         return sess.run([self.scores], feed)
+
+# example
+# discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=100, embedding_size=128,
+#                               filter_sizes=[3, 4, 5], num_filters=[128, 128, 128], l2_reg_lambda=1.0,
+#                               wgan_reg_lambda=1.0, grad_clip=1.0)
+# import numpy as np
+# input_x = np.random.randint(0, 100, (10, 20))
+# input_y = np.random.randint(0, 2, (10, 2))
+# dropout_keep_prob = 0.5
+# sess = tf.Session()
+# sess.run(tf.global_variables_initializer())
+# loss = discriminator.train(sess, input_x, input_y, dropout_keep_prob)
+# print(loss)
+# scores = discriminator.get_score(sess, input_x, dropout_keep_prob)
+# print(scores)
+# cur_d_count, _summ = discriminator.generate_summary(sess, input_x, input_y, dropout_keep_prob)
+# print(cur_d_count)
+# print(_summ)
