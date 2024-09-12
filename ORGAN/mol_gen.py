@@ -11,7 +11,7 @@ disc_params = {"DIS_L2REG": 0.2, "DIS_EMB_DIM": 32, "DIS_FILTER_SIZES": [
 organ_params.update(disc_params)
 
 model = ORGAN('qm9-5k', 'mol_metrics', params=organ_params)
-model.load_training_set('data/qm9_5k.csv')
+model.load_training_set('./data/qm9_5k.csv')
 # model.load_prev_pretraining('pretrain_ckpt/qm9-5k_pretrain_ckpt')
 model.set_training_program(
     ['druglikeliness'], [100])

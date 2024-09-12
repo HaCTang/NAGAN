@@ -1,0 +1,2 @@
+model_checkpoint_path: "qm9-5k_pretrain_ckpt"
+all_model_checkpoint_paths: "qm9-5k_pretrain_ckpt"
