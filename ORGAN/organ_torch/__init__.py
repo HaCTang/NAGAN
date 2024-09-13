@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 import os
-import tensorflow as tf
+import torch
 from builtins import range
 from collections import OrderedDict, defaultdict
 import numpy as np
@@ -52,14 +52,13 @@ class ORGAN(object):
         self.verbose = verbose
 
         # Set minimum verbosity for RDKit, Keras and TF backends
-        os.environ['TF_CPP_MIN_VLOG_LEVEL'] = '3'
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        # os.environ['TF_CPP_MIN_VLOG_LEVEL'] = '3'
+        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
         logging.set_verbosity(logging.INFO)
         rdBase.DisableLog('rdApp.error')
 
         # Set configuration for GPU
-        self.config = tf.ConfigProto()
-        self.config.gpu_options.allow_growth = True
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Set parameters
         self.PREFIX = name
@@ -94,6 +93,9 @@ class ORGAN(object):
             self.SEED = None
         random.seed(self.SEED)
         np.random.seed(self.SEED)
+        torch.manual_seed(self.SEED)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(self.SEED)
 
         if 'DIS_BATCH_SIZE' in params:
             self.DIS_BATCH_SIZE = params['DIS_BATCH_SIZE']
