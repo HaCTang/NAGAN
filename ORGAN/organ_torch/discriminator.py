@@ -31,7 +31,7 @@ def linear(input_, output_size):
     return linear_layer(input_)
 
 # 使用示例
-# input_ = torch.randn(10, 5)  # 假设输入是一个形状为 [batch, n] 的张量
+# input_ = torch.randn(10, 5)
 # output = linear(input_, 3)
 # print(output)
 
