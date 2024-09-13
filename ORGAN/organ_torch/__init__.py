@@ -15,7 +15,6 @@ from organ.wdiscriminator import WDiscriminator
 
 #from organ.discriminator import WDiscriminator as Discriminator
 
-from tensorflow import logging
 from rdkit import rdBase
 import pandas as pd
 from tqdm import tqdm, trange
@@ -54,7 +53,9 @@ class ORGAN(object):
         # Set minimum verbosity for RDKit, Keras and TF backends
         # os.environ['TF_CPP_MIN_VLOG_LEVEL'] = '3'
         # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        logging.set_verbosity(logging.INFO)
+        os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # 用于调试 CUDA 错误
+        os.environ['TORCH_CPP_LOG_LEVEL'] = 'INFO'
+        # logging.set_verbosity(logging.INFO)
         rdBase.DisableLog('rdApp.error')
 
         # Set configuration for GPU
@@ -306,12 +307,23 @@ class ORGAN(object):
                 num_filters=self.DIS_NUM_FILTERS,
                 l2_reg_lambda=self.DIS_L2REG,
                 grad_clip=self.DIS_GRAD_CLIP)
+        
+        # # Set up PyTorch training
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.generator.to(self.device)
+        # self.discriminator.to(self.device)
 
-        # run tensorflow
-        self.sess = tf.InteractiveSession()
-        #self.sess = tf.Session(config=self.config)
+        # # Initialize optimizers
+        # self.gen_optimizer = optim.Adam(self.generator.parameters(), lr=0.001)
+        # self.dis_optimizer = optim.Adam(self.discriminator.parameters(), lr=0.001)
 
-        #self.tb_write = tf.summary.FileWriter(self.log_dir)
+        # # Initialize loss function
+        # self.criterion = nn.BCELoss()
+
+        # TensorBoard setup (if needed)
+        # if 'TBOARD_LOG' in params:
+        #     from torch.utils.tensorboard import SummaryWriter
+        #     self.tb_writer = SummaryWriter(log_dir=self.CHK_PATH)
 
     def define_metric(self, name, metric, load_metric=lambda *args: None,
                       pre_batch=False, pre_metric=lambda *args: None):
@@ -551,9 +563,6 @@ class ORGAN(object):
 
         """
 
-        # Generate TF saver
-        saver = tf.train.Saver()
-
         # Set default checkpoint
         if ckpt is None:
             ckpt_dir = 'checkpoints/{}_pretrain'.format(self.PREFIX)
@@ -563,8 +572,12 @@ class ORGAN(object):
             ckpt = os.path.join(ckpt_dir, 'pretrain_ckpt')
 
         # Load from checkpoint
-        if os.path.isfile(ckpt + '.meta'):
-            saver.restore(self.sess, ckpt)
+        if os.path.isfile(ckpt):
+            checkpoint = torch.load(ckpt, map_location=self.device)
+            self.generator.load_state_dict(checkpoint['generator_state_dict'])
+            self.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+            self.gen_optimizer.load_state_dict(checkpoint['gen_optimizer_state_dict'])
+            self.dis_optimizer.load_state_dict(checkpoint['dis_optimizer_state_dict'])
             print('Pretrain loaded from previous checkpoint {}'.format(ckpt))
             self.PRETRAINED = True
         else:
@@ -623,9 +636,6 @@ class ORGAN(object):
         if not hasattr(self, 'rollout'):
             self.rollout = Rollout(self.generator, 0.8, self.PAD_NUM)
 
-        # Generate TF Saver
-        saver = tf.train.Saver()
-
         # Set default checkpoint
         if ckpt is None:
             ckpt_dir = 'checkpoints/{}'.format(self.PREFIX)
@@ -634,8 +644,12 @@ class ORGAN(object):
                 return
             ckpt = os.path.join(ckpt_dir, 'pretrain_ckpt')
 
-        if os.path.isfile(ckpt + '.meta'):
-            saver.restore(self.sess, ckpt)
+        if os.path.isfile(ckpt):
+            checkpoint = torch.load(ckpt, map_location=self.device)
+            self.generator.load_state_dict(checkpoint['generator_state_dict'])
+            self.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+            self.gen_optimizer.load_state_dict(checkpoint['gen_optimizer_state_dict'])
+            self.dis_optimizer.load_state_dict(checkpoint['dis_optimizer_state_dict'])
             print('Training loaded from previous checkpoint {}'.format(ckpt))
             self.SESS_LOADED = True
         else:
@@ -732,16 +746,19 @@ class ORGAN(object):
         """Trains the model. If necessary, also includes pretraining."""
 
         if not self.PRETRAINED and not self.SESS_LOADED:
-
-            self.sess.run(tf.global_variables_initializer())
+            self.generator.apply(self._weights_init)
+            self.discriminator.apply(self._weights_init)
             self.pretrain()
 
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
-            ckpt_file = os.path.join(ckpt_dir,
-                                     '{}_pretrain_ckpt'.format(self.PREFIX))
-            saver = tf.train.Saver()
-            path = saver.save(self.sess, ckpt_file)
+            ckpt_file = os.path.join(ckpt_dir, '{}_pretrain_ckpt.pth'.format(self.PREFIX))
+            torch.save({
+                'generator_state_dict': self.generator.state_dict(),
+                'discriminator_state_dict': self.discriminator.state_dict(),
+                'gen_optimizer_state_dict': self.gen_optimizer.state_dict(),
+                'dis_optimizer_state_dict': self.dis_optimizer.state_dict()
+            }, ckpt_file)
             if self.verbose:
                 print('Pretrain saved at {}'.format(path))
 
@@ -877,9 +894,13 @@ class ORGAN(object):
 
                 if not os.path.exists(ckpt_dir):
                     os.makedirs(ckpt_dir)
-                ckpt_file = os.path.join(
-                    ckpt_dir, '{}_{}.ckpt'.format(self.PREFIX, label))
-                path = model_saver.save(self.sess, ckpt_file)
-                print('\nModel saved at {}'.format(path))
+                ckpt_file = os.path.join(ckpt_dir, '{}_{}.pth'.format(self.PREFIX, label))
+                torch.save({
+                    'generator_state_dict': self.generator.state_dict(),
+                    'discriminator_state_dict': self.discriminator.state_dict(),
+                    'gen_optimizer_state_dict': self.gen_optimizer.state_dict(),
+                    'dis_optimizer_state_dict': self.dis_optimizer.state_dict()
+                }, ckpt_file)
+                print('\nModel saved at {}'.format(ckpt_file))
 
         print('\n######### FINISHED #########')
