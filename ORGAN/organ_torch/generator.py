@@ -122,6 +122,7 @@ class Generator(nn.Module):
         return loss.item()
 
 '''
+Difference between TensorFlow and PyTorch implementations:
 Embedding和LSTM层：使用nn.Embedding和nn.LSTM来实现嵌入和LSTM层。
 优化器：使用torch.optim.Adam作为优化器，代替TensorFlow中的AdamOptimizer。
 生成序列逻辑：通过Categorical分布和softmax的输出概率来生成序列。
