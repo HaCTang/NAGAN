@@ -2,7 +2,7 @@ import organ
 from organ import ORGAN
 
 organ_params = {
-    'PRETRAIN_GEN_EPOCHS': 250, 'PRETRAIN_DIS_EPOCHS': 10, 'MAX_LENGTH': 60, 'LAMBDA': 0.5, "DIS_EPOCHS": 2, 'SAMPLE_NUM': 6400, 'WGAN':True}
+    'PRETRAIN_GEN_EPOCHS': 250, 'PRETRAIN_DIS_EPOCHS': 10, 'MAX_LENGTH': 60, 'LAMBDA': 0.5, "DIS_EPOCHS": 2, 'SAMPLE_NUM': 6400, 'WGAN':False}
 
 # hyper-optimized parameters
 disc_params = {"DIS_L2REG": 0.2, "DIS_EMB_DIM": 32, "DIS_FILTER_SIZES": [

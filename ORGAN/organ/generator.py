@@ -164,18 +164,6 @@ class Generator(object):
 
         return
 
-    def generate_pretrain_summary(self, sess, x):
-        _summ = sess.run(
-            tf.summary.merge([
-                self.s_pretrain_loss
-            ]),
-            feed_dict={
-                self.x: x
-            }
-        )
-        cur_g_count = self.g_count
-        #self.g_count += 1
-        return cur_g_count, _summ
 
     def generate_gan_summary(self, sess, x, reward):
         _summ = sess.run(

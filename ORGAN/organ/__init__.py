@@ -664,6 +664,7 @@ class ORGAN(object):
             t_bar.set_postfix(G_loss=mean_g_loss)
 
         samples = self.generate_samples(self.SAMPLE_NUM)
+        print(samples)
         self.mle_loader.create_batches(samples)
 
         if self.LAMBDA != 0:
